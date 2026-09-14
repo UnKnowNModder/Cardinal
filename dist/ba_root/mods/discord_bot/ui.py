@@ -70,22 +70,36 @@ class CaptainRegistrationModal(ui.Modal, title="Tournament Team Registration."):
             f"Team **{self.team_name.value}** created! Invitation sent to your teammates.! Join the game server and run `/verify {code}` to verify yourself. Your code is given below.",
             ephemeral=True,
         )
-        await interaction.followup.send(code, ephemeral=True)
+        await interaction.followup.send(f"```code```", ephemeral=True)
 
 
 # team invitation view for teammates to accept/reject
 
 
-class TeamInvitationView(ui.View):
+class TeamInvitationView(ui.LayoutView):
     """accept or reject the invitation"""
 
     def __init__(self, team_id: str):
         super().__init__(timeout=None)
-        self.accept_btn.custom_id = f"tiv;accept;{team_id}"
-        self.decline_btn.custom_id = f"tiv;decline;{team_id}"
+        
+        self.accept_button = ui.Button(
+            label="Accept",
+            style=ButtonStyle.success,
+            custom_id=f"tiv;accept;{team_id}",
+        )
+        self.accept_button.callback = self.accept_btn
 
-    @ui.button(label="Accept", style=ButtonStyle.success)
-    async def accept_btn(self, interaction: Interaction, button: ui.Button):
+        self.decline_button = ui.Button(
+            label="Decline",
+            style=ButtonStyle.danger,
+            custom_id=f"tiv;decline;{team_id}",
+        )
+        self.decline_button.callback = self.decline_btn
+
+        self.container = ui.ActionRow(self.accept_button, self.decline_button)
+        self.add_item(self.container)
+
+    async def accept_btn(self, interaction: Interaction):
         season_id = tournament.active_season
         registration = Registration(season_id=season_id)
         db = registration.read()
@@ -126,10 +140,9 @@ class TeamInvitationView(ui.View):
             f"You have joined the team! Join the game server and run `/verify {code}` to verify yourself. Your code is given below.",
             ephemeral=True,
         )
-        await interaction.followup.send(code, ephemeral=True)
+        await interaction.followup.send(f"```code```", ephemeral=True)
 
-    @ui.button(label="Decline", style=ButtonStyle.danger)
-    async def decline_btn(self, interaction: Interaction, button: ui.Button):
+    async def decline_btn(self, interaction: Interaction):
         season_id = tournament.active_season
         registration = Registration(season_id=season_id)
         db = registration.read()
@@ -161,9 +174,9 @@ class TeamInvitationView(ui.View):
         # delete the team.
         captain = registration.delete(team_id=team_id)
 
-        # disable the btns
-        for child in self.children:
-            child.disabled = True
+        # disable the buttons inside the layout container
+        self.accept_button.disabled = True
+        self.decline_button.disabled = True
 
         await interaction.response.edit_message(
             f"**Invitation Declined**, {interaction.user.mention} declined the invitation for team {team_id}. CAPTAIN: <@{captain}>",

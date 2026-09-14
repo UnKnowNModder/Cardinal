@@ -2,7 +2,7 @@ from server.storage import Storage
 from server import config
 from tournament.storage import SEASONS_DIR
 from typing import BinaryIO
-import requests
+import requests, json
 
 
 class Webhook(Storage):
@@ -40,7 +40,9 @@ class Webhook(Storage):
         if not data:
             return
         url = self.message_url(data["url"], data["message_id"])
-        self.session.patch(url=url, files=files)
+        payload = json.dumps({"attachments": []})
+
+        self.session.patch(url=url, data={"payload_json": payload}, files=files)
 
     def delete(self, key: str) -> None:
         """deletes an image from webhook."""

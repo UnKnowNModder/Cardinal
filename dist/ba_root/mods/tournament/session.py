@@ -108,7 +108,7 @@ class TournamentSession(DualTeamSession):
                         loser.series = 0
 
                     utils.success(
-                        message=f"Match concluded. Winner: {winner.name}, Loser: {loser.name}"
+                        message=f"Match concluded. Winner: {winner.name}, Loser: {loser.name}\nResults are announced in discord.\nServer will restart in 10 seconds."
                     )
                     manager.conclude_active_match(winner, loser)
             else:

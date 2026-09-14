@@ -32,7 +32,8 @@ class DiscordBot(commands.Bot):
     async def setup_hook(self) -> None:
         self.add_view(TeamInvitationView("9999"))
         self.tree.on_error = self.on_app_cmd_error
-        await self.add_cog(Commands(self))
+        await self.add_cog(GeneralCommands(self))
+        await self.add_cog(TournamentCommands(self))
 
     async def on_app_cmd_error(
         self, interaction: Interaction, error: app_commands.AppCommandError
@@ -73,193 +74,12 @@ def require(authority: Authority):
     return app_commands.check(examine)
 
 
-class Commands(commands.Cog):
+class GeneralCommands(commands.Cog):
     """cog for slash commands"""
 
     def __init__(self, bot: DiscordBot):
         self.bot = bot
         self.client = GameClient()
-
-    @app_commands.command(name="createseason")
-    @app_commands.describe(type="Tournament Type", series="Series Type")
-    @require(authority=Authority.LEADER)
-    async def create_season(
-        self, interaction: Interaction, type: TournamentType, series: SeriesType
-    ) -> None:
-        """creates a tournament season"""
-        if int(tournament.active_season):
-            await interaction.response.send_message(
-                "Cannot create! a season is going on."
-            )
-            return
-
-        from datetime import datetime, timedelta, timezone
-
-        ist = timezone(timedelta(hours=5, minutes=30))
-
-        schema = SeasonSchema(
-            series=series, type=type, created_at=datetime.now(ist).isoformat()
-        )
-        tournament.create_season(schema=schema)
-        await interaction.response.send_message(
-            f"The season has been created with {type} and {series}"
-        )
-
-    @app_commands.command(name="participate")
-    async def participate(self, interaction: Interaction) -> None:
-        """participate in tournament"""
-        season_id = tournament.active_season
-        if not int(season_id):
-            await interaction.response.send_message(
-                "There is no tournament season opened currently.", ephemeral=True
-            )
-            return
-
-        if not tournament.are_registrations_open:
-            await interaction.response.send_message(
-                "Registrations have been closed", ephemeral=True
-            )
-            return
-
-        season_data = tournament.get_season(season_id=season_id)
-        size = season_data.type.count
-        if size > 1:
-            # for not-solo seasons
-            await interaction.response.send_modal(
-                CaptainRegistrationModal(season_id=season_id, size=size - 1)
-            )
-        else:
-            # for solo seasons
-            from tournament.registration import Registration
-
-            registration = Registration(season_id=season_id)
-            if registration.is_registered(str(interaction.user.id)):
-                await interaction.response.send_message(
-                    "You are already registered.", ephemeral=True
-                )
-                return
-
-            code = registration.generate_code()
-            success = registration.register(
-                team_name=interaction.user.display_name,
-                captain_discord_id=str(interaction.user.id),
-                captain_code=code,
-            )
-            if not success:
-                await interaction.response.send_message(
-                    "You are already registered in this season.", ephemeral=True
-                )
-                return
-
-            role = discord.utils.get(interaction.guild.roles, name="Participant")
-            await interaction.user.add_roles(role)
-            await interaction.response.send_message(
-                f"Registered as {interaction.user.display_name}! Join the game server and run `/verify {code}` to verify yourself. Your code is given below.",
-                ephemeral=True,
-            )
-            await interaction.followup.send(code, ephemeral=True)
-
-    @app_commands.command(name="registrations")
-    @app_commands.describe(option="Open or close the registrations")
-    @require(Authority.LEADER)
-    async def registrations(self, interaction: Interaction, option: bool) -> None:
-        """open/close the registrations"""
-        if option:
-            if tournament.are_registrations_open:
-                await interaction.response.send_message(
-                    "Cannot open the registrations! they are already open.",
-                    ephemeral=True,
-                )
-                return
-            tournament.open_registrations()
-        else:
-            if not tournament.are_registrations_open:
-                await interaction.response.send_message(
-                    "Cannot close the registrations! they are already closed.",
-                    ephemeral=True,
-                )
-                return
-            tournament.close_registrations()
-
-        await interaction.response.send_message(
-            f"{'Opened' if option else 'closed'} the registrations."
-        )
-
-    @app_commands.command(name="changeuuid")
-    @require(Authority.LEADER)
-    async def changeuuid(
-        self, interaction: Interaction, user: discord.Member, uuid: str
-    ) -> None:
-        """changes the uuid of the registered player"""
-        if not int(tournament.active_season):
-            await interaction.response.send_message(
-                "There is no tournament season opened currently.", ephemeral=True
-            )
-            return
-
-        if not tournament.are_registrations_open:
-            await interaction.response.send_message(
-                "Registrations have been closed", ephemeral=True
-            )
-            return
-
-        from tournament.registration import Registration
-
-        registration = Registration(season_id=tournament.active_season)
-        if not registration.is_registered(str(user.id)):
-            await interaction.response.send_message(
-                "He is not registered.", ephemeral=True
-            )
-            return
-
-        registration.change_uuid(discord_id=str(user.id), new_uuid=uuid)
-        await interaction.response.send_message(
-            f"Changed the uuid of {user.mention}'s account."
-        )
-
-    @app_commands.command(name="startbrackets")
-    @require(Authority.LEADER)
-    async def startbrackets(self, interaction: Interaction) -> None:
-        """starts the brackets"""
-        if not int(tournament.active_season):
-            await interaction.response.send_message(
-                "There is no tournament season opened currently.", ephemeral=True
-            )
-            return
-
-        if tournament.are_registrations_open:
-            await interaction.response.send_message(
-                "Cannot start the brackets! registrations are still open.",
-                ephemeral=True,
-            )
-            return
-
-        from tournament.brackets import Brackets
-
-        brackets = Brackets(season_id=tournament.active_season)
-        if brackets.read()["active_round"]:
-            await interaction.response.send_message(
-                "Cannot start the brackets! brackets are already started.",
-                ephemeral=True,
-            )
-            return
-        from tournament.registration import Registration
-        await interaction.response.defer(ephemeral=True)
-
-        # we need to generate the brackets.
-        registration = Registration(season_id=brackets.season_id)
-        teams = list(registration.read()["teams"].keys())
-        try:
-            brackets.generate_group_stage(teams=teams)
-        except AssertionError:
-            await interaction.followup.send(
-                "The number of teams are either odd or less than 4. The brackets cannot be generated.",
-                ephemeral=True,
-            )
-            return
-        await interaction.followup.send(
-            "The brackets have been started!", ephemeral=True
-        )
 
     @app_commands.command(name="say")
     @app_commands.describe(message="The text to send")
@@ -328,6 +148,201 @@ class Commands(commands.Cog):
             await interaction.response.send_message(
                 f"{user.name} has been added to owners", ephemeral=True
             )
+
+class TournamentCommands(
+    app_commands.GroupCog,
+    group_name="tournament",
+    group_description="Commands to manage tournaments.",
+):
+    def __init__(self, bot: DiscordBot) -> None:
+        self.bot = bot
+        super().__init__()
+
+    @app_commands.command(name="create")
+    @app_commands.describe(type="Tournament Type", series="Series Type")
+    @require(authority=Authority.LEADER)
+    async def create_season(
+        self, interaction: Interaction, type: TournamentType, series: SeriesType
+    ) -> None:
+        """creates a tournament season"""
+        if int(tournament.active_season):
+            await interaction.response.send_message(
+                "Cannot create! a season is going on."
+            )
+            return
+
+        from datetime import datetime, timedelta, timezone
+
+        ist = timezone(timedelta(hours=5, minutes=30))
+
+        schema = SeasonSchema(
+            series=series, type=type, created_at=datetime.now(ist).isoformat()
+        )
+        tournament.create_season(schema=schema)
+        await interaction.response.send_message(
+            f"The {type.lower()} season has been created with series: {series.lower()}"
+        )
+        # make the participant role if it doesn't exist.
+        if not discord.utils.get(interaction.guild.roles, name="Participant"):
+            await interaction.guild.create_role(
+                name="Participant", mentionable=True,
+            )
+
+    @app_commands.command(name="register")
+    async def register(self, interaction: Interaction) -> None:
+        """registers a player to the tournament"""
+        season_id = tournament.active_season
+        if not int(season_id):
+            await interaction.response.send_message(
+                "There is no tournament season opened currently.", ephemeral=True
+            )
+            return
+
+        if not tournament.are_registrations_open:
+            await interaction.response.send_message(
+                "Registrations have been closed", ephemeral=True
+            )
+            return
+
+        season_data = tournament.get_season(season_id=season_id)
+        size = season_data.type.count
+        if size > 1:
+            # for not-solo seasons
+            await interaction.response.send_modal(
+                CaptainRegistrationModal(season_id=season_id, size=size - 1)
+            )
+        else:
+            # for solo seasons
+            from tournament.registration import Registration
+
+            registration = Registration(season_id=season_id)
+            if registration.is_registered(str(interaction.user.id)):
+                await interaction.response.send_message(
+                    "You are already registered.", ephemeral=True
+                )
+                return
+
+            code = registration.generate_code()
+            success = registration.register(
+                team_name=interaction.user.display_name,
+                captain_discord_id=str(interaction.user.id),
+                captain_code=code,
+            )
+            if not success:
+                await interaction.response.send_message(
+                    "You are already registered in this season.", ephemeral=True
+                )
+                return
+
+            role = discord.utils.get(interaction.guild.roles, name="Participant")
+            await interaction.user.add_roles(role)
+            await interaction.response.send_message(
+                f"Registered as {interaction.user.display_name}! Join the game server and run `/verify {code}` to verify yourself. Your code is given below.",
+                ephemeral=True,
+            )
+            await interaction.followup.send(f"```code```", ephemeral=True)
+
+    @app_commands.command(name="registrations")
+    @app_commands.describe(option="Open or close the registrations")
+    @require(Authority.LEADER)
+    async def registrations(self, interaction: Interaction, option: bool) -> None:
+        """open/close the registrations"""
+        if option:
+            if tournament.are_registrations_open:
+                await interaction.response.send_message(
+                    "Cannot open the registrations! they are already open.",
+                    ephemeral=True,
+                )
+                return
+            tournament.open_registrations()
+        else:
+            if not tournament.are_registrations_open:
+                await interaction.response.send_message(
+                    "Cannot close the registrations! they are already closed.",
+                    ephemeral=True,
+                )
+                return
+            tournament.close_registrations()
+
+        await interaction.response.send_message(
+            f"{'Opened' if option else 'closed'} the registrations."
+        )
+
+    @app_commands.command(name="uuid")
+    @require(Authority.LEADER)
+    async def change_uuid(
+        self, interaction: Interaction, user: discord.Member, uuid: str
+    ) -> None:
+        """changes the uuid of the registered player"""
+        if not int(tournament.active_season):
+            await interaction.response.send_message(
+                "There is no tournament season opened currently.", ephemeral=True
+            )
+            return
+
+        if not tournament.are_registrations_open:
+            await interaction.response.send_message(
+                "Registrations have been closed", ephemeral=True
+            )
+            return
+
+        from tournament.registration import Registration
+
+        registration = Registration(season_id=tournament.active_season)
+        if not registration.is_registered(str(user.id)):
+            await interaction.response.send_message(
+                "He is not registered.", ephemeral=True
+            )
+            return
+
+        registration.change_uuid(discord_id=str(user.id), new_uuid=uuid)
+        await interaction.response.send_message(
+            f"Changed the uuid of {user.mention}'s account."
+        )
+
+    @app_commands.command(name="start")
+    @require(Authority.LEADER)
+    async def start_tournament(self, interaction: Interaction) -> None:
+        """starts the tournament"""
+        if not int(tournament.active_season):
+            await interaction.response.send_message(
+                "There is no tournament season opened currently.", ephemeral=True
+            )
+            return
+
+        if tournament.are_registrations_open:
+            await interaction.response.send_message(
+                "Cannot start the tournament! registrations are still open.",
+                ephemeral=True,
+            )
+            return
+
+        from tournament.brackets import Brackets
+
+        brackets = Brackets(season_id=tournament.active_season)
+        if brackets.read()["active_round"]:
+            await interaction.response.send_message(
+                "The tournament is already started.",
+                ephemeral=True,
+            )
+            return
+        from tournament.registration import Registration
+        await interaction.response.defer(ephemeral=True)
+
+        # we need to generate the brackets.
+        registration = Registration(season_id=brackets.season_id)
+        teams = list(registration.read()["teams"].keys())
+        try:
+            brackets.generate_group_stage(teams=teams)
+        except AssertionError:
+            await interaction.followup.send(
+                "The number of teams are either odd or less than 4. The tournament cannot be started.",
+                ephemeral=True,
+            )
+            return
+        await interaction.followup.send(
+            "The tournament has been started!", ephemeral=True
+        )
 
 
 if __name__ == "__main__":

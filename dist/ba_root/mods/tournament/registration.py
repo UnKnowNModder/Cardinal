@@ -1,7 +1,7 @@
 from server.enums import TeamStatus
 from server.storage import Storage
 from tournament.storage import SEASONS_DIR
-from secrets import token_hex
+from secrets import randbelow
 
 
 class Registration(Storage):
@@ -98,7 +98,7 @@ class Registration(Storage):
     def generate_code(self) -> str:
         """generates a code for the registration."""
         db = self.read()
-        code = token_hex(4)
+        code = f"{randbelow(1_000_000):06d}"
         if code in db["codes"]:
             return self.generate_code()
         return code

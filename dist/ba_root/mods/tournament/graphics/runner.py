@@ -6,9 +6,6 @@ import os
 import json
 from server.storage import MODS_DIR
 
-# this will be used to store season id, and needed data for the generation of the graphical images.
-DATA = []
-
 FILES = {
     "title.png": "https://files.catbox.moe/aw1utu.png",
     "logo.png": "https://files.catbox.moe/g92tad.png",
