@@ -16,7 +16,7 @@ curl -fsSL https://install.thecardinal.workers.dev | bash
 
 ### Cd into the directory
 ```
-cd EntityX
+cd Cardinal
 ```
 
 ### Open a tmux session (you should always do this when starting the server)
