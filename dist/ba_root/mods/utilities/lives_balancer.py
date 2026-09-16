@@ -4,6 +4,8 @@ def balance_lives(self: EliminationGame, player: Player):
     """ balance lives of a player across his teammates."""
     team = player.team
     players_count = len(team.players)
+    if players_count < 1:
+        return
     for index in range(player.lives):
         teammate = team.players[index % players_count]
         if teammate.lives == 0:

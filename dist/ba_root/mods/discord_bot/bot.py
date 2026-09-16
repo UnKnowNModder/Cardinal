@@ -150,7 +150,7 @@ class GeneralCommands(commands.Cog):
             )
 
 class TournamentCommands(
-    app_commands.GroupCog,
+    commands.GroupCog,
     group_name="tournament",
     group_description="Commands to manage tournaments.",
 ):
