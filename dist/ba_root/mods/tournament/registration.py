@@ -1,6 +1,7 @@
 from server.enums import TeamStatus
 from server.storage import Storage
 from tournament.storage import SEASONS_DIR
+from tournament.graphics import runner
 from secrets import randbelow
 
 
@@ -36,9 +37,12 @@ class Registration(Storage):
             self.is_registered(discord_id) for discord_id in invited_members
         ):
             # if any of them is registered, decline it.
-            return
+            return False
 
         db = self.read()
+        # case: team-name already exists
+        if team_name in db["teams"]:
+            return None
         # team_id = f"team-{len(db['teams']) + 1}"
         # we use team-name as team-id
         team_id = team_name
@@ -156,6 +160,11 @@ class Registration(Storage):
                 if all(m["account_id"] for m in team["members"]):
                     # update the team status
                     team["status"] = TeamStatus.VERIFIED
+                    data = {
+                        "type": "registration",
+                        "name": team_id,
+                    }
+                    runner.run(data=data)
 
                 self.commit(db)
                 return True

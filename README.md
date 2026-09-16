@@ -45,10 +45,11 @@ tmux
 - it works when bot is enabled, since all the tournaments are handled with bot commands only.
 
 ## Tournament Setup:
-- you need to have three channels in your server:
+- you need to have four channels in your server:
 - 1. brackets
 - 2. results
 - 3. dashboard
+- 4. registrations/register
 - you have to create webhook for each of the channels and put them in the mods_config.json under the discord's webhooks section.
 - in the dist/ba_root/mods/tournament/graphics/runner.py, you have to replace the title and logo png with your own logo and title png urls (make sure they are raw urls)
 

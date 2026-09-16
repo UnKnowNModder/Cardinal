@@ -1536,13 +1536,71 @@ def generate_mainstage_bracket(json_files: list, webhook: Webhook, key: str) -> 
         webhook.send("dashboard", key, files)
 
 
+def generate_player_registration(name: str, webhook: Webhook):
+    """
+    Generates a registration card.
+    """
+    card_w, card_h = 800, 380
+
+    img = make_background(
+        card_w, card_h,
+        ellipse1=((-80, -100, card_w + 80, card_h + 120), (*CYAN, 35), 2),
+        ellipse2=((-40, -60, card_w + 40, card_h + 80), (*GOLD, 30), 2),
+        star_count=50, star_seed=77,
+    )
+    
+    add_watermark(img, LOGO_FILE, card_w, card_h, alpha=0.15, thumb_size=(320, 320))
+    d = ImageDraw.Draw(img)
+    center_x = card_w // 2
+
+    top_y = 25
+
+    if os.path.exists(TITLE_FILE):
+        try:
+            title_img = Image.open(TITLE_FILE).convert("RGBA")
+            title_img.thumbnail((480, 110), Image.Resampling.LANCZOS)
+            img.alpha_composite(title_img, ((card_w - title_img.width) // 2, top_y))
+            top_y += title_img.height + 10
+        except Exception as e:
+            print("Title image warning:", e)
+            top_y += 10
+    else:
+        main_title_font = get_font(34, bold=True)
+        center_text(d, center_x, top_y + 20, "SUCCESSFULLY REGISTERED", main_title_font, GOLD)
+        top_y += 50
+
+    # Main Card Container Frame
+    box_w, box_h = 720, 210
+    box_coords = (center_x - box_w // 2, top_y, center_x + box_w // 2, top_y + box_h)
+    draw_rounded_rect(img, box_coords, radius=14, fill=(8, 15, 35, 230), outline=(*CYAN, 200), width=2)
+
+    # Confirmation Subtitle
+    sub_font = get_font(18, bold=True)
+    center_text(d, center_x, top_y + 35, "TOURNAMENT REGISTRATION CONFIRMED", sub_font, CYAN)
+
+    d.line([(center_x - 300, top_y + 65), (center_x + 300, top_y + 65)], fill=(*CYAN, 90), width=2)
+
+    player_name = str(name)
+    name_font = fit_font(d, player_name, max_width=660, size=44, bold=True, minimum=18)
+    center_text(d, center_x, top_y + 108, player_name, name_font, GREEN)
+
+    with io.BytesIO() as image_buffer:
+        img.convert("RGB").save(image_buffer, "PNG", optimize=True)
+        image_buffer.seek(0)
+        files = webhook.create("registration-card.png", image_buffer)
+        webhook.send("registrations", f"player-registration-{player_name}", files)
+
+
 if __name__ == "__main__":
     data = json.loads(sys.argv[1])
     season_id = data["season_id"]
     webhook = Webhook(season_id)
     SEASON_DIR = GRAPHICS_DIR.parent / "seasons" / season_id
 
-    if data["type"] == "results":
+    if data["type"] == "registration":
+        generate_player_registration(data["name"], webhook)
+
+    elif data["type"] == "results":
         # for match result
         generate_match_result(data["details"], webhook)
 

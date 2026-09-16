@@ -10,6 +10,7 @@ from discord_bot.client import GameClient
 from discord_bot.ui import (
     CaptainRegistrationModal,
     TeamInvitationView,
+    SoloRegistrationModal,
 )
 from traceback import format_exc
 from roles import roles
@@ -213,34 +214,7 @@ class TournamentCommands(
             )
         else:
             # for solo seasons
-            from tournament.registration import Registration
-
-            registration = Registration(season_id=season_id)
-            if registration.is_registered(str(interaction.user.id)):
-                await interaction.response.send_message(
-                    "You are already registered.", ephemeral=True
-                )
-                return
-
-            code = registration.generate_code()
-            success = registration.register(
-                team_name=interaction.user.display_name,
-                captain_discord_id=str(interaction.user.id),
-                captain_code=code,
-            )
-            if not success:
-                await interaction.response.send_message(
-                    "You are already registered in this season.", ephemeral=True
-                )
-                return
-
-            role = discord.utils.get(interaction.guild.roles, name="Participant")
-            await interaction.user.add_roles(role)
-            await interaction.response.send_message(
-                f"Registered as {interaction.user.display_name}! Join the game server and run `/verify {code}` to verify yourself. Your code is given below.",
-                ephemeral=True,
-            )
-            await interaction.followup.send(f"```code```", ephemeral=True)
+            await interaction.response.send_modal(SoloRegistrationModal(season_id=season_id))
 
     @app_commands.command(name="registrations")
     @app_commands.describe(option="Open or close the registrations")

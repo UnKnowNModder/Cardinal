@@ -13,6 +13,7 @@ class Webhook(Storage):
         self.dashboard_url = config.discord.webhooks.dashboard
         self.results_url = config.discord.webhooks.results
         self.brackets_url = config.discord.webhooks.brackets
+        self.registrations_url = config.discord.webhooks.registrations
         self.session = requests.Session()
 
     def send(self, type: str, key: str, files: dict) -> None:
@@ -21,6 +22,8 @@ class Webhook(Storage):
             url = self.results_url
         elif type == "brackets":
             url = self.brackets_url
+        elif type == "registrations":
+            url = self.registrations_url
         else:
             url = self.dashboard_url
 
