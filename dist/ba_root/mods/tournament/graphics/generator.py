@@ -4,11 +4,50 @@ import math
 import time
 import sys
 import random
+import subprocess
 import io
 from tournament.graphics.runner import GRAPHICS_DIR
 from tournament.webhook import Webhook
 from pathlib import Path
-from PIL import Image, ImageDraw, ImageFont
+
+try: 
+    from PIL import Image, ImageDraw, ImageFont
+except ImportError:
+    import shutil
+    uv = shutil.which("uv")
+    # quietly install it.
+    subprocess.run([uv, "add", "pillow"], check=True)
+    from PIL import Image, ImageDraw, ImageFont
+
+##### start setup #####
+
+FILES = {
+    "title.png": "https://files.catbox.moe/aw1utu.png",
+    "logo.png": "https://files.catbox.moe/g92tad.png",
+    "arial.ttf": "https://cdn.jsdelivr.net/gh/taveevut/Windows-10-Fonts-Default@master/arial.ttf",
+    "arialbd.ttf": "https://cdn.jsdelivr.net/gh/taveevut/Windows-10-Fonts-Default@master/arialbd.ttf",
+}
+
+def download(url: str, path: str) -> bool:
+    """downloads a file from a url to a path"""
+    try:
+        subprocess.run(["curl", "-fsSL", url, "-o", path], check=True)
+        return True
+    except subprocess.CalledProcessError:
+        return False
+
+
+def verify_dependencies() -> bool:
+    """verifies that all dependencies are present"""
+    download_statuses = []
+    for file, url in FILES.items():
+        file_path = GRAPHICS_DIR / file
+        if not file_path.exists():
+            download_statuses.append(download(url, str(file_path)))
+
+    return all(download_statuses)
+
+##### end setup #####
 
 LOGO_FILE = GRAPHICS_DIR / "logo.png"
 TITLE_FILE = GRAPHICS_DIR / "title.png"
@@ -1592,6 +1631,10 @@ def generate_player_registration(name: str, webhook: Webhook):
 
 
 if __name__ == "__main__":
+    if not verify_dependencies():
+        print("Missing dependencies, or download failed.")
+        sys.exit(1)
+
     data = json.loads(sys.argv[1])
     season_id = data["season_id"]
     webhook = Webhook(season_id)

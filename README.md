@@ -51,7 +51,7 @@ tmux
 - 3. dashboard
 - 4. registrations/register
 - you have to create webhook for each of the channels and put them in the mods_config.json under the discord's webhooks section.
-- in the dist/ba_root/mods/tournament/graphics/runner.py, you have to replace the title and logo png with your own logo and title png urls (make sure they are raw urls)
+- in the dist/ba_root/mods/tournament/graphics/generator.py, you have to replace the title and logo png with your own logo and title png urls (make sure they are raw urls)
 
 ## Tournament Features:
 - Automatically generates brackets for the tournament based on the number of teams/solo.

@@ -9,6 +9,7 @@ class Registration(Storage):
     """storage class for registration"""
 
     def __init__(self, season_id: str):
+        self.season_id = season_id
         super().__init__("registrations.json", SEASONS_DIR / season_id)
         self.bootstrap()
 
@@ -163,6 +164,7 @@ class Registration(Storage):
                     data = {
                         "type": "registration",
                         "name": team_id,
+                        "season_id": self.season_id,
                     }
                     runner.run(data=data)
 

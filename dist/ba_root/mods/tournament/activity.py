@@ -14,3 +14,4 @@ class TournamentTransitionActivity(TransitionActivity):
 
         call = bascenev1.CallStrict(bascenev1.new_host_session, TournamentSession)
         bascenev1.pushcall(call)
+        bascenev1.broadcastmessage("Join your respective teams!")
