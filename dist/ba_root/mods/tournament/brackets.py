@@ -33,9 +33,10 @@ class Brackets(Storage):
 
     def generate_group_stage(self, teams: list):
         """generates the group stage brackets."""
+        # TODO: make it more dynamically syncing with real logic.
         # we assume that the total number of teams is even.
         teams_count = len(teams)
-        groups_count = teams_count & -teams_count
+        groups_count = (teams_count & -teams_count) // 2 # for now.
 
         # ah we dont want the groups to be only two, round-robin will make it longer otherwise or the teams count is less than 4
         assert groups_count >= 4
@@ -51,13 +52,15 @@ class Brackets(Storage):
         teams_per_group = teams_count // groups_count
 
         # calculates the number of winning teams needed out of each group
-        winning_teams_per_group = main_stage_capacity // groups_count
+        winning_teams_per_group = main_stage_capacity // groups_count // 2
 
         for index in range(groups_count):
-            groups[f"group_{index + 1}"] = {
+            group_key = f"group_{index + 1}"
+            groups[group_key] = {
                 "rounds": self.generate_round_robin(
                     teams[index * teams_per_group : (index + 1) * teams_per_group],
                     count=teams_per_group,
+                    group_key=group_key,
                 ),
                 "standings": [],
             }
@@ -85,7 +88,7 @@ class Brackets(Storage):
         }
         runner.run(data=data)
 
-    def generate_round_robin(self, teams: list, count: int) -> dict:
+    def generate_round_robin(self, teams: list, count: int, group_key: str) -> dict:
         """generates rounds robin for teams."""
         rounds = {}
 
@@ -101,7 +104,7 @@ class Brackets(Storage):
                 first = teams[i]  # first in sense of next front.
                 last = teams[count - 1 - i]  # last in sense of previous back.
 
-                match = self.create_match_format(team1=first, team2=last)
+                match = self.create_match_format(team1=first, team2=last, group_key=group_key, round_key=f"round {round}")
 
                 # if one of them is None, we give them BYEs.
                 if first is None or last is None:
@@ -148,15 +151,15 @@ class Brackets(Storage):
             round["status"] = Status.COMPLETED
 
             next_round_key = f"round {int(round_key.split()[1]) + 1}"
-            group["rounds"][next_round_key]["status"] = Status.IN_PROGRESS
+            try:
+                group["rounds"][next_round_key]["status"] = Status.IN_PROGRESS
+            except KeyError:
+                # the round does not exist, means rounds are over now.
+                pass
 
         # recalculate the standings
         self.recalculate_group_standings(group=group)
-        self.send_group_stage_standings(
-            group_key=group_key,
-            standings=group["standings_sorted"],
-            winning_teams_per_group=gs["winning_teams_per_group"],
-        )
+        self.send_group_stage_standings()
 
         # check if the whole groupstage is completed.
         if all(
@@ -203,6 +206,7 @@ class Brackets(Storage):
             self.commit(current_round_data, external_path=current_round_path)
             # load the next round only if finals has not been completed.
             if current_round_path.name == "finals.json":
+                self.announce_tournament_completion()
                 return
             self.generate_ms_next_round()
             return
@@ -270,9 +274,7 @@ class Brackets(Storage):
         # this will come in help for showing the stats on leaderboard.
         group["standings_sorted"] = sorted_teams
 
-    def send_group_stage_standings(
-        self, group_key: str, standings: list, winning_teams_per_group: int
-    ) -> None:
+    def send_group_stage_standings(self) -> None:
         """sends the group stage standings to discord webhook."""
         data = {
             "type": "group-standings",
@@ -421,12 +423,108 @@ class Brackets(Storage):
         }
         self.webhook.send("results", "tournament_completion", payload)
 
+    def send_results(
+        self,
+        winner: str,
+        score1: int,
+        score2: int,
+        series1: int,
+        series2: int,
+    ) -> None:
+        details = {
+            "team1": self.active_match["teams"][0],
+            "team2": self.active_match["teams"][1],
+            "winner": winner,
+            "score1": score1,
+            "score2": score2,
+            "series1": series1,
+            "series2": series2,
+            "season_id": self.season_id,
+        }
+        data = {
+            "type": "results",
+            "details": details,
+            "season_id": self.season_id,
+        }
+        runner.run(data=data)
+
+    def send_players_dashboard(self) -> None:
+        """sends the players dashboard."""
+        data = {
+            "type": "player-standings",
+            "season_id": self.season_id,
+        }
+        runner.run(data=data)
+
     def get_active_round_path(self) -> Path:
         """returns the active round path."""
         brackets = self.read()
         return (self.directory / "rounds" / brackets["active_round"]).with_suffix(
             ".json"
         )
+
+    def list_matches(self) -> dict:
+        """ returns the list of all the matches in active round."""
+        round_path = self.brackets.get_active_round_path()
+        round_data = self.brackets.read(round_path)
+        if not round_data:
+            return {} # no active round.
+
+        matches = {}
+
+        # if the round is groupstage;
+        if round_path.name == "group-stage.json":
+            for group in round_data["groups"].values():
+                for round in group["rounds"].values():
+                    if round["status"] == Status.IN_PROGRESS:
+                        matches.update(round["matches"])
+        else:
+            matches.update(round_data["matches"])
+
+        return matches
+
+    def give_win_to_team(self, match_key: str, team_index: int) -> str:
+        """gives the win to the team."""
+        matches = self.list_matches()
+        if not matches:
+            return "No active round."
+
+        if match_key not in matches:
+            return "No such match."
+
+        match = matches[match_key]
+        if match["status"] != Status.COMPLETED:
+            from tournament import tournament
+            series_length = tournament.series_length
+            # update the team's score by 1
+            series1, series2 = 0, 0
+            if team_index == 1:
+                team = match["team1"]
+                match["score1"] = series_length * 4
+                series1 = series_length
+            else:
+                team = match["team2"]
+                match["score2"] = series_length * 4
+                series2 = series_length
+            
+            if match["group_key"]:
+                # its a group stage match.
+                self.brackets.update_gs_match(
+                    group_key=match["group_key"],
+                    round_key=match["round_key"],
+                    match_key=match_key,
+                    score1=match["score1"],
+                    score2=match["score2"],
+                )
+            else:
+                # its a main stage match.
+                self.brackets.update_ms_match(
+                    match_key=match_key, score1=match["score1"], score2=match["score2"]
+                )
+
+            # and now we can send the results to discord.
+            self.send_results(team, match["score1"], match["score2"], series1, series2)
+            return f"Given {team} win."
 
     def get_round_name(self, count: int) -> str:
         """returns the round-name by teams-count"""
@@ -447,6 +545,8 @@ class Brackets(Storage):
         self,
         team1: str,
         team2: str,
+        group_key: str | None = None,
+        round_key: str | None = None,
     ) -> dict:
         """match format."""
         return {
@@ -456,5 +556,7 @@ class Brackets(Storage):
             "score2": 0,
             "winner": None,
             "loser": None,
+            "group_key": group_key,
+            "round_key": round_key,
             "status": Status.PENDING,
         }

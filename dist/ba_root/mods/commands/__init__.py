@@ -74,7 +74,7 @@ def command_line(msg: str, client: Client) -> str | None:
                 function_arguments = mapper(client, args)
                 function(*function_arguments)
             except:
-                print(traceback.format_exc())
+                # print(traceback.format_exc())
                 client.error(f"Usage: {cmd['usage']}")
             return
     # wasn't any known command.

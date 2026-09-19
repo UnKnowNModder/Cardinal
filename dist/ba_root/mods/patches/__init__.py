@@ -43,6 +43,8 @@ def load():
     """automatically imports patch files in the directory."""
     package_dir = Path(__file__).parent
     for file in package_dir.glob("*.py"):
+        if file.stem == "__init__":
+            continue
         module_name = f"{__package__}.{file.stem}"
         try:
             importlib.import_module(module_name)

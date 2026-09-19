@@ -5,7 +5,6 @@ import bascenev1
 from server.enums import Status
 from tournament.brackets import Brackets
 from tournament.webhook import Webhook
-from tournament.graphics import runner
 
 
 class Manager:
@@ -173,43 +172,11 @@ class Manager:
                 match_key=match_key, score1=score1, score2=score2
             )
 
-        self.send_results(
-            winner, score1, score2, series1, series2
+        self.brackets.send_results(
+            winner.name, score1, score2, series1, series2
         )
+        self.brackets.send_players_dashboard()
         self.end_tournament_session()
-
-    def send_players_dashboard(self) -> None:
-        """sends the players dashboard."""
-        data = {
-            "type": "player-standings",
-            "season_id": self.season_id,
-        }
-        runner.run(data=data)
-
-    def send_results(
-        self,
-        winner: bascenev1.SessionTeam,
-        score1: int,
-        score2: int,
-        series1: int,
-        series2: int,
-    ) -> None:
-        details = {
-            "team1": self.active_match["teams"][0],
-            "team2": self.active_match["teams"][1],
-            "winner": winner.name,
-            "score1": score1,
-            "score2": score2,
-            "series1": series1,
-            "series2": series2,
-            "season_id": self.season_id,
-        }
-        data = {
-            "type": "results",
-            "details": details,
-            "season_id": self.season_id,
-        }
-        runner.run(data=data)
 
     def start_tournament_session(self) -> None:
         """starts the tournament session."""
@@ -223,7 +190,7 @@ class Manager:
 
     def end_tournament_session(self) -> None:
         """ends the tournament session."""
-        self.send_players_dashboard()
+        bascenev1.broadcastmessage("Server will restart in 10 seconds.")
         with bascenev1.ContextRef.empty():
             bascenev1.apptimer(10.0, bascenev1.app.classic.server._execute_shutdown)
 
