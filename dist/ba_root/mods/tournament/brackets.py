@@ -536,7 +536,7 @@ class Brackets(Storage):
                 )
 
             # and now we can send the results to discord.
-            self.send_results(team, match["score1"], match["score2"], series1, series2)
+            self.send_results(team, match["team1"], match["team2"], match["score1"], match["score2"], series1, series2)
             self.send_players_dashboard()
             return f"Given {team} win."
 
