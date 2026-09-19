@@ -5,7 +5,7 @@ import logging
 import discord
 from discord import Activity, ActivityType, Intents, Interaction, app_commands
 from discord.ext import commands
-
+import asyncio
 from discord_bot.client import GameClient
 from discord_bot.ui import (
     CaptainRegistrationModal,
@@ -332,8 +332,12 @@ class TournamentCommands(
         await interaction.followup.send(
             "The tournament has been started!", ephemeral=True
         )
+        await asyncio.sleep(30)
+        pings = "These are the registered players:\n"
         for team in teams:
-            await interaction.followup.send(f"{team}: <@{registration['teams'][team]['captain']}>")
+            pings += f"{team}: <@{registration['teams'][team]['captain']}>\n"
+
+        await interaction.followup.send(pings)
 
 
 if __name__ == "__main__":
