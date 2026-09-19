@@ -331,7 +331,7 @@ def generate_match_result(data: dict, webhook: Webhook) -> None:
         img.convert("RGB").save(image_buffer, "PNG", optimize=True)
         image_buffer.seek(0)
         files = webhook.create("match_result.png", image_buffer)
-        webhook.send("results", "match_result", files)
+        webhook.send("results", f"match_result-{data["key"]}", files)
 
 
 def generate_player_standings(

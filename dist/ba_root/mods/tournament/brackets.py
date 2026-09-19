@@ -489,7 +489,7 @@ class Brackets(Storage):
 
         return matches
 
-    def give_win_to_team(self, match_index: int, team_index: int) -> str:
+    def give_win_to_team(self, match_index: int, team_index: int, force: bool = False) -> str:
         """gives the win to the team."""
         if team_index not in (1, 2):
             return "Team index must be either 1 or 2."
@@ -507,7 +507,7 @@ class Brackets(Storage):
             return "No such match."
 
         match = matches[match_key]
-        if match["status"] != Status.COMPLETED:
+        if match["status"] != Status.COMPLETED or force:
             from tournament import tournament
             series_length = tournament.series_length
             # update the team's score by 1
@@ -541,6 +541,7 @@ class Brackets(Storage):
             self.send_results(team, match["team1"], match["team2"], match["score1"], match["score2"], series1, series2, match_key)
             self.send_players_dashboard()
             return f"Given {team} win."
+        return "Match is already completed"
 
     def get_round_name(self, count: int) -> str:
         """returns the round-name by teams-count"""

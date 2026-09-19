@@ -272,6 +272,7 @@ class TournamentCommands(
     @require(Authority.LEADER)
     async def give_win(self, interaction: Interaction, match_index: int, team_index: int) -> None:
         """ gives win to the team"""
+        
         if not int(tournament.active_season):
             await interaction.response.send_message(
                 "There is no tournament season opened currently.", ephemeral=True
