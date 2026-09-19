@@ -254,12 +254,6 @@ class TournamentCommands(
             )
             return
 
-        if not tournament.are_registrations_open:
-            await interaction.response.send_message(
-                "Registrations have been closed", ephemeral=True
-            )
-            return
-
         from tournament.registration import Registration
 
         registration = Registration(season_id=tournament.active_season)
@@ -276,7 +270,7 @@ class TournamentCommands(
 
     @app_commands.command(name="win")
     @require(Authority.LEADER)
-    async def give_win(self, interaction: Interaction, match_id: str, team_index: int) -> None:
+    async def give_win(self, interaction: Interaction, match_index: int, team_index: int) -> None:
         """ gives win to the team"""
         if not int(tournament.active_season):
             await interaction.response.send_message(
@@ -286,9 +280,38 @@ class TournamentCommands(
 
         from tournament.brackets import Brackets
         brackets = Brackets(season_id=tournament.active_season)
-        response = brackets.give_win_to_team(match_key=match_id, team_index=team_index)
+        response = brackets.give_win_to_team(match_index=match_index, team_index=team_index)
         await interaction.response.send_message(response, ephemeral=True)
-        
+
+    @app_commands.command(name="list")
+    @require(Authority.LEADER)
+    async def list_matches(self, interaction: Interaction) -> None:
+        """lists all the matches in active round."""
+        from tournament.brackets import Brackets
+        brackets = Brackets(season_id=tournament.active_season)
+        matches = brackets.list_matches()
+        if not matches:
+            await interaction.response.send_message("There are no matches in the round.")
+            return
+
+        lines = ["**Round matches:**\n"]
+
+        for match_index, (key, match) in enumerate(matches.items(), start=1):
+            team1 = match["team1"] or "BYE"
+            team2 = match["team2"] or "BYE"
+            status = match["status"]
+
+            line = (
+                f"`Match #{match_index}` | "
+                f"**(1)** `{team1}` vs **(2)** `{team2}` | "
+                f"Status: `{status}`"
+            )
+            lines.append(line)
+
+        message_text = "\n".join(lines)
+        await interaction.response.send_message(message_text, ephemeral=True)
+
+    
     @app_commands.command(name="start")
     @require(Authority.LEADER)
     async def start_tournament(self, interaction: Interaction) -> None:

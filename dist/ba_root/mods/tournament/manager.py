@@ -173,7 +173,7 @@ class Manager:
             )
 
         self.brackets.send_results(
-            winner.name, score1, score2, series1, series2
+            winner.name, self.active_match["teams"][0], self.active_match["teams"][1], score1, score2, series1, series2
         )
         self.brackets.send_players_dashboard()
         self.end_tournament_session()

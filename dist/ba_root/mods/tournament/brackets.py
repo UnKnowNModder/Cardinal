@@ -426,14 +426,16 @@ class Brackets(Storage):
     def send_results(
         self,
         winner: str,
+        team1: str,
+        team2: str,
         score1: int,
         score2: int,
         series1: int,
         series2: int,
     ) -> None:
         details = {
-            "team1": self.active_match["teams"][0],
-            "team2": self.active_match["teams"][1],
+            "team1": team1,
+            "team2": team2,
             "winner": winner,
             "score1": score1,
             "score2": score2,
@@ -465,8 +467,8 @@ class Brackets(Storage):
 
     def list_matches(self) -> dict:
         """ returns the list of all the matches in active round."""
-        round_path = self.brackets.get_active_round_path()
-        round_data = self.brackets.read(round_path)
+        round_path = self.get_active_round_path()
+        round_data = self.read(round_path)
         if not round_data:
             return {} # no active round.
 
@@ -474,20 +476,30 @@ class Brackets(Storage):
 
         # if the round is groupstage;
         if round_path.name == "group-stage.json":
-            for group in round_data["groups"].values():
-                for round in group["rounds"].values():
+            for g_key, group in round_data["groups"].items():
+                for r_key, round in group["rounds"].items():
                     if round["status"] == Status.IN_PROGRESS:
-                        matches.update(round["matches"])
+                        for m_key, match in round["matches"].items():
+                            composite_key = f"{g_key}-{r_key}-{m_key}"
+                            matches[composite_key] = match
         else:
             matches.update(round_data["matches"])
 
         return matches
 
-    def give_win_to_team(self, match_key: str, team_index: int) -> str:
+    def give_win_to_team(self, match_index: int, team_index: int) -> str:
         """gives the win to the team."""
+        if team_index not in (1, 2):
+            return "Team index must be either 1 or 2."
         matches = self.list_matches()
         if not matches:
             return "No active round."
+
+        match_keys = list(matches.keys())
+        if match_index < 1 or match_index > len(match_keys):
+            return f"Invalid match index. Must be between 1 and {len(match_keys)}."
+
+        match_key = match_keys[match_index - 1]
 
         if match_key not in matches:
             return "No such match."
@@ -509,21 +521,23 @@ class Brackets(Storage):
             
             if match["group_key"]:
                 # its a group stage match.
-                self.brackets.update_gs_match(
+                real_match_key = match_key.split("-")[-1]
+                self.update_gs_match(
                     group_key=match["group_key"],
                     round_key=match["round_key"],
-                    match_key=match_key,
+                    match_key=real_match_key,
                     score1=match["score1"],
                     score2=match["score2"],
                 )
             else:
                 # its a main stage match.
-                self.brackets.update_ms_match(
+                self.update_ms_match(
                     match_key=match_key, score1=match["score1"], score2=match["score2"]
                 )
 
             # and now we can send the results to discord.
             self.send_results(team, match["score1"], match["score2"], series1, series2)
+            self.send_players_dashboard()
             return f"Given {team} win."
 
     def get_round_name(self, count: int) -> str:
