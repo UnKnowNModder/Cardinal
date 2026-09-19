@@ -432,6 +432,7 @@ class Brackets(Storage):
         score2: int,
         series1: int,
         series2: int,
+        key: str,
     ) -> None:
         details = {
             "team1": team1,
@@ -441,6 +442,7 @@ class Brackets(Storage):
             "score2": score2,
             "series1": series1,
             "series2": series2,
+            "key": key,
             "season_id": self.season_id,
         }
         data = {
@@ -536,7 +538,7 @@ class Brackets(Storage):
                 )
 
             # and now we can send the results to discord.
-            self.send_results(team, match["team1"], match["team2"], match["score1"], match["score2"], series1, series2)
+            self.send_results(team, match["team1"], match["team2"], match["score1"], match["score2"], series1, series2, match_key)
             self.send_players_dashboard()
             return f"Given {team} win."
 
