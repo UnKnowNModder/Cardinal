@@ -161,6 +161,13 @@ class Brackets(Storage):
         self.recalculate_group_standings(group=group)
         self.send_group_stage_standings()
 
+        # update the groupstage brackets.
+        data = {
+            "type": "group-stage",
+            "season_id": self.season_id,
+        }
+        runner.run(data=data)
+
         # check if the whole groupstage is completed.
         if all(
             round["status"] == Status.COMPLETED

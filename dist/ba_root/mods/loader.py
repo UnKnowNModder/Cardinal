@@ -45,14 +45,14 @@ class Load(babase.Plugin):
 
         manager.manager.initialize(season_id=tournament.tournament.active_season)
 
-        # load patches.
-        patches.load()
-
         # load commands.
         commands.load()
 
         # load utilities.
         utilities.load()
+
+        # load patches.
+        patches.load()
 
         # discord bot
         if server.config.discord.enable:
