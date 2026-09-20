@@ -64,7 +64,7 @@ port = 43210
 # players. Any device in the party can have more than one player on
 # it if they have multiple controllers. Also, this number currently
 # includes the server so generally make it 1 bigger than you need.
-max_party_size = 9
+max_party_size = 15
 
 # Max players that can join a session. If present this will override
 # the session's preferred max_players. if a value below 0 is given
@@ -80,7 +80,7 @@ max_party_size = 9
 # your own custom playlists, use the 'share' functionality in the
 # playlist editor in the regular version of the game. This will give
 # you a numeric code you can enter here to host that playlist.
-playlist_code = 617192
+playlist_code = 624678
 
 # Alternately, you can embed playlist data here instead of using
 # codes. Make sure to set session_type to the correct type for the

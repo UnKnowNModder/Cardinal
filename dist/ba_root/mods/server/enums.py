@@ -33,7 +33,7 @@ class Utility(StrEnum):
 class Playlist(IntEnum):
     """enum class for playlists."""
 
-    TEAMS = 617192
+    TEAMS = 624678
     FFA = 617193
 
 
