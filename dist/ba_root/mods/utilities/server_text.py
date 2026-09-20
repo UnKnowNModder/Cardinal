@@ -1,6 +1,5 @@
 import bascenev1 as bs
 
-
 def make_server_text(map_node: bs.Node) -> None:
     """makes the server text."""
     bs.newnode(
@@ -33,8 +32,7 @@ def make_server_text(map_node: bs.Node) -> None:
         owner=map_node,
         attrs={
             'texture': bs.gettexture("trophy"),
-            "position": (480, -690),
-            "attach": "bottomRight",
+            "position": (480, -330),
             'scale': (45.0, 55.0),
             'color': (1.0, 0.86, 0.27)
         }
