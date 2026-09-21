@@ -1,39 +1,36 @@
 import bascenev1 as bs
 
-def make_server_text(map_node: bs.Node) -> None:
+def make_server_text() -> None:
     """makes the server text."""
     bs.newnode(
         "text",
-        owner=map_node,
         attrs={
             "text": "C",
             "big": True,
             'h_align': 'center',
-            'position': (440, -460),
-            'scale': 0.5,
+            'position': (-48, 198),
+            'scale': 0.24,
             'color': (1.0, 0.86, 0.27)
         }
     )
 
     bs.newnode(
         "text",
-        owner=map_node,
         attrs={
             "text": "RDINALS",
             "big": True,
             'h_align': 'center',
-            'position': (560, -460),
-            'scale': 0.4,
+            'position': (10, 200),
+            'scale': 0.2,
             'color': (1.0, 0.86, 0.27)
         }
     )
     bs.newnode(
         'image',
-        owner=map_node,
         attrs={
             'texture': bs.gettexture("trophy"),
-            "position": (480, -330),
-            'scale': (45.0, 55.0),
+            "position": (-25, 317.5),
+            'scale': (20.0, 30.0),
             'color': (1.0, 0.86, 0.27)
         }
     )

@@ -143,19 +143,25 @@ class Brackets(Storage):
         match["score2"] = score2
         match["status"] = Status.COMPLETED
 
-        # lets check if the round is completed.
-        if all(
-            match["status"] == Status.COMPLETED for match in round["matches"].values()
-        ):
-            # all matches are completed.
-            round["status"] = Status.COMPLETED
+        # all the matches of same round across all the groups
+        all_groups_round_completed = (
+            m["status"] == Status.COMPLETED
+            for g in gs["groups"].values()
+            for m in g["rounds"][round_key]["matches"].values()
+        )
 
+        # lets check if the round of all groups is completed.
+        if all_groups_round_completed:
+            # all matches are completed.
             next_round_key = f"round {int(round_key.split()[1]) + 1}"
-            try:
-                group["rounds"][next_round_key]["status"] = Status.IN_PROGRESS
-            except KeyError:
-                # the round does not exist, means rounds are over now.
-                pass
+
+            for g in gs["groups"].values():
+                if round_key in g["rounds"]:
+                    g["rounds"][round_key]["status"] = Status.COMPLETED
+
+                if next_round_key in g["rounds"]:
+                    # if a next round exists, turn it on.
+                    g["rounds"][next_round_key]["status"] = Status.IN_PROGRESS
 
         # recalculate the standings
         self.recalculate_group_standings(group=group)

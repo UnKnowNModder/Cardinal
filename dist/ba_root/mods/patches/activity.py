@@ -4,7 +4,7 @@ from bascenev1lib.game.elimination import EliminationGame
 from utilities.endvote import EndVote
 from utilities.team_balancer import check_team_balance
 from time import monotonic
-
+from utilities import server_text
 
 @patch_method(Activity, "end", initial=True)
 def end(*args, **kwargs):
@@ -15,6 +15,8 @@ def end(*args, **kwargs):
 
 @patch_method(Activity, "on_begin", initial=True)
 def on_begin(*args, **kwargs):
+    # make our server text.
+    server_text.make_server_text()
     # don't allow player's to start endvote if the game just started, for that. log the time.
     EndVote.relaxation = monotonic() + 60  # don't allow for initial 60 seconds
 
