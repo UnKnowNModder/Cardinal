@@ -6,7 +6,6 @@ from server.enums import Status
 from server.storage import Storage
 from tournament.storage import SEASONS_DIR
 from tournament.registration import Registration
-from tournament.webhook import Webhook
 from tournament.graphics import runner
 
 
@@ -23,7 +22,6 @@ class Brackets(Storage):
     def bootstrap(self):
         """creates the file and setups up method"""
         self.registration = Registration(self.season_id)
-        self.webhook = Webhook(self.season_id)
         if not self.path.exists():
             database = {
                 "active_round": "",
@@ -31,7 +29,7 @@ class Brackets(Storage):
             }
             self.commit(database)
 
-    def generate_group_stage(self, teams: list):
+    def generate_group_stage(self, teams: list) -> None | bool:
         """generates the group stage brackets."""
         # TODO: make it more dynamically syncing with real logic.
         # we assume that the total number of teams is even.
@@ -63,7 +61,10 @@ class Brackets(Storage):
                     group_key=group_key,
                 ),
                 "standings": [],
+                "standings_sorted": []
             }
+            # fill up the standings.
+            self.recalculate_group_standings(groups[group_key])
 
         # we have the rounds of each group now.
         # let's save them into their database file.
@@ -81,12 +82,7 @@ class Brackets(Storage):
         brackets["total_rounds"] += 1
         self.commit(brackets)
 
-        # send the brackets to discord.
-        data = {
-            "type": "group-stage",
-            "season_id": self.season_id,
-        }
-        runner.run(data=data)
+        return True
 
     def generate_round_robin(self, teams: list, count: int, group_key: str) -> dict:
         """generates rounds robin for teams."""
@@ -144,7 +140,7 @@ class Brackets(Storage):
         match["status"] = Status.COMPLETED
 
         # all the matches of same round across all the groups
-        all_groups_round_completed = (
+        all_groups_round_completed = all(
             m["status"] == Status.COMPLETED
             for g in gs["groups"].values()
             for m in g["rounds"][round_key]["matches"].values()
@@ -165,14 +161,6 @@ class Brackets(Storage):
 
         # recalculate the standings
         self.recalculate_group_standings(group=group)
-        self.send_group_stage_standings()
-
-        # update the groupstage brackets.
-        data = {
-            "type": "group-stage",
-            "season_id": self.season_id,
-        }
-        runner.run(data=data)
 
         # check if the whole groupstage is completed.
         if all(
@@ -185,11 +173,15 @@ class Brackets(Storage):
 
             # commit now because main stage will check the status of the groupstage.
             self.commit(gs, external_path=self.group_stage_path)
+            self.send_groupstage_brackets()
+            self.send_group_stage_standings()
             # load the main stage.
             self.generate_main_stage()
             return
 
         self.commit(gs, external_path=self.group_stage_path)
+        self.send_groupstage_brackets()
+        self.send_group_stage_standings()
 
     def update_ms_match(self, match_key: str, score1: int, score2: int):
         """updates the match of the main-stage."""
@@ -217,6 +209,7 @@ class Brackets(Storage):
             current_round_data["status"] = Status.COMPLETED
             # commit now because next round will check the status of the current round.
             self.commit(current_round_data, external_path=current_round_path)
+            self.send_mainstage_brackets()
             # load the next round only if finals has not been completed.
             if current_round_path.name == "finals.json":
                 self.announce_tournament_completion()
@@ -225,6 +218,7 @@ class Brackets(Storage):
             return
 
         self.commit(current_round_data, external_path=current_round_path)
+        self.send_mainstage_brackets()
 
     def recalculate_group_standings(self, group: dict) -> None:
         """recalculates the group standings based on:
@@ -361,11 +355,7 @@ class Brackets(Storage):
         self.commit(round_data, external_path=file_path)
 
         # send the brackets to discord.
-        data = {
-            "type": "main-stage",
-            "season_id": self.season_id,
-        }
-        runner.run(data=data)
+        self.send_mainstage_brackets()
 
     def generate_ms_next_round(self):
         """generates the next rounds of main-stage"""
@@ -419,22 +409,23 @@ class Brackets(Storage):
         db.active_season = "0"
         tournament.commit(db)
 
-        payload = {
-            "embeds": [
-                {
-                    "title": f"Tournament Completed - Season {self.season_id}",
-                    "image": {
-                        "url": "https://cdn.discordapp.com/attachments/1539651471383986287/1543948505490399232/file_0000000083708211964990ed39276938.png?ex=6a980b18&is=6a96b998&hm=ab034dd8a40dfb01dac8022655d25f29ccf4a4cdc8acdd735cec19261471b44d&"
-                    },
-                    "description": f"**Tournament has been completed. Congratulations to all the participants.**",
-                    "color": 10167990,
-                    "footer": {
-                        "text": "Thanks for playing this tournament <3",
-                    },
-                }
-            ]
+        # TODO: announce completion with winners.
+
+    def send_mainstage_brackets(self) -> None:
+        """sends the mainstage brackets."""
+        data = {
+            "type": "main-stage",
+            "season_id": self.season_id,
         }
-        self.webhook.send("results", "tournament_completion", payload)
+        runner.run(data=data)
+
+    def send_groupstage_brackets(self) -> None:
+        """ sends groupstage brackets with webhooks."""
+        data = {
+            "type": "group-stage",
+            "season_id": self.season_id,
+        }
+        runner.run(data=data)
 
     def send_results(
         self,

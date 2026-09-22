@@ -183,11 +183,18 @@ class TournamentCommands(
         await interaction.response.send_message(
             f"The {type.lower()} season has been created with series: {series.lower()}"
         )
-        # make the participant role if it doesn't exist.
-        if not discord.utils.get(interaction.guild.roles, name="Participant"):
-            await interaction.guild.create_role(
-                name="Participant", mentionable=True,
-            )
+        # check if the participant role exists
+        role = discord.utils.get(interaction.guild.roles, name="Participant")
+        if role:
+            # if yes, delete it.
+            role.delete()
+        # make the role.
+        role = await interaction.guild.create_role(
+            name="Participant", mentionable=True,
+        )
+        season = tournament.get_season(season_id=tournament.active_season)
+        season.participant_role_id = role.id
+        tournament.update_season(season_id=tournament.active_season, season=season)
 
     @app_commands.command(name="register")
     async def register(self, interaction: Interaction) -> None:
@@ -346,20 +353,40 @@ class TournamentCommands(
         registration = Registration(season_id=brackets.season_id).read()
         teams = list(registration["teams"].keys())
         try:
-            brackets.generate_group_stage(teams=teams)
+            is_groupstage = brackets.generate_group_stage(teams=teams)
         except AssertionError:
             await interaction.followup.send(
                 "The number of teams are either less than 4 or not divisible by 4. The tournament cannot be started.",
                 ephemeral=True,
             )
             return
+
+        if is_groupstage:
+            # send the groupstage brackets.
+            brackets.send_groupstage_brackets()
+            # we need to make/use each group's own role to ping later.
+            guild = interaction.guild
+            gs = brackets.read(brackets.group_stage_path)
+            for group_name in gs["groups"]:
+                # check if the group already has a role.
+                role = discord.utils.get(guild.roles, name=group_name)
+                if role:
+                    # if it does, delete it.
+                    role.delete()
+                # now we create the role.
+                role = await guild.create_role(
+                    name=group_name, mentionable=True,
+                )
+                # now we can add the role id to the group.
+                gs["groups"][group_name]["role_id"] = role.id
+            brackets.commit(gs, external_path=brackets.group_stage_path)
         await interaction.followup.send(
             "The tournament has been started!", ephemeral=True
         )
         await asyncio.sleep(30)
-        pings = "These are the registered players:\n"
-        for team in teams:
-            pings += f"{team}: <@{registration['teams'][team]['captain']}>\n"
+        pings = "### These are the registered players/teams:\n"
+        for index, team in enumerate(teams, start=1):
+            pings += f"{index}. `{team}`: <@{registration['teams'][team]['captain']}>\n"
 
         await interaction.followup.send(pings)
 

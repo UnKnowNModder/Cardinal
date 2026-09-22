@@ -4,7 +4,6 @@ import bascenev1
 
 from server.enums import Status
 from tournament.brackets import Brackets
-from tournament.webhook import Webhook
 
 
 class Manager:
@@ -21,7 +20,6 @@ class Manager:
         """initializes the manager."""
         self.season_id = season_id
         self.brackets = Brackets(season_id=season_id)
-        self.webhook = Webhook(season_id=season_id)
         self.load_pending_matches()
 
     def load_pending_matches(self):

@@ -16,6 +16,7 @@ class SeasonSchema:
     type: TournamentType = TournamentType.SOLO
     stage: TournamentStage = TournamentStage.REGISTRATION
     created_at: str = ""
+    participant_role_id: int = 0
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> SeasonSchema:
@@ -24,6 +25,7 @@ class SeasonSchema:
             type=TournamentType(data.get("type", TournamentType.SOLO)),
             stage=TournamentStage(data.get("stage", TournamentStage.REGISTRATION)),
             created_at=data.get("created_at", ""),
+            participant_role_id=data.get("participant_role_id", 0),
         )
 
     def to_dict(self) -> dict[str, Any]:
@@ -32,6 +34,7 @@ class SeasonSchema:
             "type": self.type,
             "stage": self.stage,
             "created_at": self.created_at,
+            "participant_role_id": self.participant_role_id,
         }
 
 

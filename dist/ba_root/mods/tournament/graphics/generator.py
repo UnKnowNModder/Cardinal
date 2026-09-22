@@ -877,13 +877,18 @@ def _generate_group_schedule(group_name: str, group_data: dict, webhook: Webhook
         if data:
             # there is a bracket already sent.
             # we will edit it.
-            webhook.edit(f"{group_name.lower()}", files)
+            webhook.edit(f"{group_name.lower()}", files, content=f"<@&{group_data['role_id']}>, Your brackets are here.")
             return
         # there is no bracket sent yet, we will send a new one.
-        webhook.send("brackets", f"{group_name.lower()}", files)
+        webhook.send("brackets", f"{group_name.lower()}", files, content=f"<@&{group_data['role_id']}>, Your brackets are here.")
 
 
 def _generate_group_overview(groups: dict, webhook: Webhook) -> None:
+    # check if the overview image is sent for this season.
+    data = webhook.get("group-overview")
+    if data:
+        # there is an overview already sent.
+        return
     img = _group_background()
     add_watermark(img, LOGO_FILE, WIDTH, HEIGHT, alpha=0.4, y_pos=125)
     _draw_group_header(img, "GROUP STAGE")
@@ -1077,7 +1082,7 @@ def load_round_data(json_files: list) -> dict:
     return rounds_data
 
 
-def generate_mainstage_bracket(json_files: list, webhook: Webhook, key: str) -> None:
+def generate_mainstage_bracket(json_files: list, webhook: Webhook) -> None:
     img = _bracket_background()
     add_watermark(
         img,
@@ -1571,8 +1576,16 @@ def generate_mainstage_bracket(json_files: list, webhook: Webhook, key: str) -> 
     with io.BytesIO() as image_buffer:
         img.convert("RGB").save(image_buffer, "PNG", optimize=True)
         image_buffer.seek(0)
-        files = webhook.create("result.png", image_buffer)
-        webhook.send("dashboard", key, files)
+        files = webhook.create("mainstage-brackets.png", image_buffer)
+        # firstly check if there have been a bracket sent.
+        data = webhook.get(f"mainstage-brackets")
+        if data:
+            # there is a bracket already sent.
+            # we will edit it.
+            webhook.edit(f"mainstage-brackets", files)
+            return
+        # there is no bracket sent yet, we will send a new one.
+        webhook.send("brackets", f"mainstage-brackets", files)
 
 
 def generate_player_registration(name: str, webhook: Webhook):
@@ -1670,5 +1683,5 @@ if __name__ == "__main__":
         ]
         sorted_files = sorted(files, key=lambda x: x.stat().st_ctime)
         generate_mainstage_bracket(
-            json_files=sorted_files, webhook=webhook, key=data["key"]
+            json_files=sorted_files, webhook=webhook
         )

@@ -16,7 +16,7 @@ class Webhook(Storage):
         self.registrations_url = config.discord.webhooks.registrations
         self.session = requests.Session()
 
-    def send(self, type: str, key: str, files: dict) -> None:
+    def send(self, type: str, key: str, files: dict | None = None, content: str | None = None) -> None:
         """sends an image to the webhook."""
         if type == "results":
             url = self.results_url
@@ -30,20 +30,40 @@ class Webhook(Storage):
         db = self.read()
         if key in db:
             return
-        response = self.session.post(url=f"{url}?wait=true", files=files)
+
+        payload = {}
+        if content:
+            payload["content"] = content
+
+        if files and content:
+            data = {"payload_json": json.dumps(payload)}
+        elif content:
+            data = payload
+        else:
+            data = None
+        
+        response = self.session.post(url=f"{url}?wait=true", data=data, files=files)
         db[key] = {
             "message_id": response.json()["id"],
             "url": url,
         }
         self.commit(db)
 
-    def edit(self, key: str, files: dict) -> None:
+    def edit(self, key: str, files: dict | None = None, content: str | None = None) -> None:
         """edits an image from webhook."""
         data = self.get(key)
         if not data:
             return
+
+        payload = {}
+        if content:
+            payload["content"] = content
+
+        if files:
+            payload["attachments"] = []
+        
         url = self.message_url(data["url"], data["message_id"])
-        payload = json.dumps({"attachments": []})
+        payload = json.dumps(payload)
 
         self.session.patch(url=url, data={"payload_json": payload}, files=files)
 
