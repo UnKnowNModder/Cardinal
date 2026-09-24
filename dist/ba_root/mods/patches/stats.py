@@ -10,10 +10,10 @@ import os
 @patch_method(ScoreScreenActivity, "on_begin", initial=True)
 def new_on_begin(self) -> None:
     """modified."""
-    if os.getenv("BA_TOURNAMENT_MATCH") is not None:
+    if os.getenv("TOURNAMENT_MATCH") is not None:
         if stats.tournament_path.is_dir():
             stats.tournament_path = (
-                stats.tournament_path / os.getenv("BA_TOURNAMENT_MATCH") / "stats.json"
+                stats.tournament_path / os.getenv("TOURNAMENT_MATCH") / "stats.json"
             )
         update_stats(self._stats, tournament=True)
         return

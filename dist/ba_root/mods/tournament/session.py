@@ -20,6 +20,8 @@ class TournamentSession(DualTeamSession):
         super().on_team_join(team)
         # change the team name to their actual team name.
         team.name = manager.active_match["teams"][team.id]
+        team.score = 0
+        team.series = 0
 
     @override
     def on_player_request(self, player: bascenev1.SessionPlayer):
@@ -36,7 +38,7 @@ class TournamentSession(DualTeamSession):
 
         if not client.public_uuid in manager.active_match["uuids"]:
             utils.error(
-                message=f"{player.getname(full=True)}'s device uuid is changed, please contact the server admins."
+                message=f"{client.name}'s device uuid is changed, please contact the server admins."
             )
             client.error(
                 "Your device uuid could not be verified, please contact the server admins."
@@ -44,6 +46,41 @@ class TournamentSession(DualTeamSession):
             return False
 
         return super().on_player_request(player)
+
+    def create_scoreboard(self) -> None:
+        """ adds score, series texts with their team names."""
+        vs_text = bascenev1.newnode(
+            "text",
+            attrs={
+                "text": "vs",
+                "position": (0, 250),
+                "color": (0.5, 0.5, 1),
+                "scale": 1,
+                "h_align": "center",
+            },
+        )
+        team_x_positions = [-250, 230]
+        for team in self.sessionteams:
+            team.text = bascenev1.newnode(
+                "text",
+                attrs={
+                    "text": team.name,
+                    "position": (team_x_positions[team.id], 250),
+                    "color": (1, 1, 0),
+                    "scale": 1.25,
+                    "h_align": "center",
+                },
+            )
+            team.score_text = bascenev1.newnode(
+                "text",
+                attrs={
+                    "text": f"{team.score}/{team.series}",
+                    "position": (team_x_positions[team.id], 220),
+                    "color": (1, 1, 1),
+                    "scale": 1,
+                    "h_align": "center",
+                },
+            )
 
     @override
     def handlemessage(self, msg: Any) -> Any:
@@ -84,15 +121,10 @@ class TournamentSession(DualTeamSession):
             loser = winnergroups[1].teams[0]
             winner.customdata["score"] += 1
 
-            if not hasattr(winner, "score"):
-                winner.score = 0
-
             winner.score += 1
 
             # If a team has won, show final victory screen.
             if winner.customdata["score"] >= (self._series_length - 1) / 2 + 1:
-                if not hasattr(winner, "series"):
-                    winner.series = 0
                 winner.series += 1
                 self.setactivity(
                     bascenev1.newactivity(
@@ -102,11 +134,6 @@ class TournamentSession(DualTeamSession):
                 )
 
                 if winner.series >= tournament.series_length:
-                    if not hasattr(loser, "score"):
-                        loser.score = 0
-                    if not hasattr(loser, "series"):
-                        loser.series = 0
-
                     utils.success(
                         message=f"Match concluded. Winner: {winner.name}, Loser: {loser.name}\nResults are announced in discord."
                     )

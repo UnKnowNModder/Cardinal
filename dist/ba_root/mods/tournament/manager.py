@@ -179,7 +179,7 @@ class Manager:
     def start_tournament_session(self) -> None:
         """starts the tournament session."""
         # set os env to stop server from restarting in between a match and collect player stats.
-        os.environ["BA_TOURNAMENT_MATCH"] = self.season_id
+        os.environ["TOURNAMENT_MATCH"] = self.season_id
         from .activity import TournamentTransitionActivity
 
         session = bascenev1.get_foreground_host_session()
