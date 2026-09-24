@@ -164,10 +164,12 @@ class Manager:
                 match_key=match_key,
                 score1=score1,
                 score2=score2,
+                series1=series1,
+                series2=series2,
             )
         else:
             self.brackets.update_ms_match(
-                match_key=match_key, score1=score1, score2=score2
+                match_key=match_key, score1=score1, score2=score2, series1=series1, series2=series2
             )
 
         self.brackets.send_results(
@@ -180,6 +182,8 @@ class Manager:
         """starts the tournament session."""
         # set os env to stop server from restarting in between a match and collect player stats.
         os.environ["TOURNAMENT_MATCH"] = self.season_id
+        # send the announcement to the discord server
+        self.brackets.announce_match_start(self.active_match["teams"][0], self.active_match["teams"][1])
         from .activity import TournamentTransitionActivity
 
         session = bascenev1.get_foreground_host_session()

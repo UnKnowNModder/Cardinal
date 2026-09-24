@@ -120,7 +120,7 @@ class Brackets(Storage):
         return rounds
 
     def update_gs_match(
-        self, group_key: str, round_key: str, match_key: str, score1: int, score2: int
+        self, group_key: str, round_key: str, match_key: str, score1: int, score2: int, series1: int, series2: int
     ):
         """updates the match of the group round."""
         gs = self.read(external_path=self.group_stage_path)
@@ -128,7 +128,7 @@ class Brackets(Storage):
         round = group["rounds"][round_key]
         match = round["matches"][match_key]
 
-        if score1 > score2:
+        if series1 > series2:
             match["winner"] = match["team1"]
             match["loser"] = match["team2"]
         else:
@@ -183,14 +183,14 @@ class Brackets(Storage):
         self.send_groupstage_brackets()
         self.send_group_stage_standings()
 
-    def update_ms_match(self, match_key: str, score1: int, score2: int):
+    def update_ms_match(self, match_key: str, score1: int, score2: int, series1: int, series2: int):
         """updates the match of the main-stage."""
         current_round_path = self.get_active_round_path()
         current_round_data = self.read(current_round_path)
 
         match = current_round_data["matches"][match_key]
 
-        if score1 > score2:
+        if series1 > series2:
             match["winner"] = match["team1"]
             match["loser"] = match["team2"]
         else:
@@ -258,7 +258,7 @@ class Brackets(Storage):
                 stats[t2]["rounds_won"] += s2
                 stats[t2]["rounds_lost"] += s1
 
-                if s1 > s2:
+                if match["winner"] == match["team1"]:
                     stats[t1]["wins"] += 1
                     stats[t2]["loses"] += 1
                     stats[t1]["points"] += 3
@@ -411,6 +411,17 @@ class Brackets(Storage):
 
         # TODO: announce completion with winners.
 
+    def announce_match_start(self, team1: str, team2: str) -> None:
+        """announces the match start in discord."""
+        from tournament import tournament
+        from tournament.webhook import Webhook
+        webhook = Webhook(self.season_id)
+        participant_role_id = tournament.get_season(self.season_id).participant_role_id
+
+        message = f"<@&{participant_role_id}> **{team1}** vs **{team2}** is live now in the server!"
+        webhook.send("announcements", key="match-announcement", content=message)
+
+
     def send_mainstage_brackets(self) -> None:
         """sends the mainstage brackets."""
         data = {
@@ -534,11 +545,13 @@ class Brackets(Storage):
                     match_key=real_match_key,
                     score1=match["score1"],
                     score2=match["score2"],
+                    series1=series1,
+                    series2=series2,
                 )
             else:
                 # its a main stage match.
                 self.update_ms_match(
-                    match_key=match_key, score1=match["score1"], score2=match["score2"]
+                    match_key=match_key, score1=match["score1"], score2=match["score2"], series1=series1, series2=series2
                 )
 
             # and now we can send the results to discord.

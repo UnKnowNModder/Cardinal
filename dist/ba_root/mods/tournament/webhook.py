@@ -13,6 +13,7 @@ class Webhook(Storage):
         self.dashboard_url = config.discord.webhooks.dashboard
         self.results_url = config.discord.webhooks.results
         self.brackets_url = config.discord.webhooks.brackets
+        self.announcements_url = config.discord.webhooks.announcements
         self.registrations_url = config.discord.webhooks.registrations
         self.session = requests.Session()
 
@@ -24,12 +25,12 @@ class Webhook(Storage):
             url = self.brackets_url
         elif type == "registrations":
             url = self.registrations_url
+        elif type == "announcements":
+            url = self.announcements_url
         else:
             url = self.dashboard_url
 
         db = self.read()
-        if key in db:
-            return
 
         payload = {}
         if content:

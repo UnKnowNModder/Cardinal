@@ -49,35 +49,25 @@ class TournamentSession(DualTeamSession):
 
     def create_scoreboard(self) -> None:
         """ adds score, series texts with their team names."""
-        vs_text = bascenev1.newnode(
+        bascenev1.newnode(
             "text",
             attrs={
                 "text": "vs",
-                "position": (0, 250),
+                "position": (-600, 250),
                 "color": (0.5, 0.5, 1),
-                "scale": 1,
+                "scale": 0.75,
                 "h_align": "center",
             },
         )
-        team_x_positions = [-250, 230]
+        team_y_positions = [275, 220]
         for team in self.sessionteams:
             team.text = bascenev1.newnode(
                 "text",
                 attrs={
-                    "text": team.name,
-                    "position": (team_x_positions[team.id], 250),
+                    "text": f"{team.name[15:]} -> {team.score}/{team.series}",
+                    "position": (-600, team_y_positions[team.id]),
                     "color": (1, 1, 0),
-                    "scale": 1.25,
-                    "h_align": "center",
-                },
-            )
-            team.score_text = bascenev1.newnode(
-                "text",
-                attrs={
-                    "text": f"{team.score}/{team.series}",
-                    "position": (team_x_positions[team.id], 220),
-                    "color": (1, 1, 1),
-                    "scale": 1,
+                    "scale": 0.8,
                     "h_align": "center",
                 },
             )

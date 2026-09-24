@@ -15,7 +15,7 @@ from discord_bot.ui import (
 from traceback import format_exc
 from roles import roles
 from server import config
-from server.enums import Authority, Role, SeriesType, TournamentType
+from server.enums import Authority, Role, SeriesType, TournamentType, TournamentStage
 from tournament import tournament
 from tournament.schema import SeasonSchema
 
@@ -389,6 +389,11 @@ class TournamentCommands(
             pings += f"{index}. `{team}`: <@{registration['teams'][team]['captain']}>\n"
 
         await interaction.followup.send(pings)
+
+        # update the tournament season stage
+        season = tournament.get_season(tournament.active_season)
+        season.stage = TournamentStage.IN_PROGRESS
+        tournament.update_season(season_id=tournament.active_season, season=season)
 
 
 if __name__ == "__main__":

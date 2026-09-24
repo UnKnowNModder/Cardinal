@@ -177,7 +177,7 @@ protocol_version = 36
 # How many seconds individual players from a given account must wait
 # before rejoining the game. This can help suppress exploits
 # involving leaving and rejoining or switching teams rapidly.
-#player_rejoin_cooldown = 10.0
+player_rejoin_cooldown = 0.5
 
 # Log levels for particular loggers, overriding the engine's
 # defaults. Valid values are NOTSET, DEBUG, INFO, WARNING, ERROR, or

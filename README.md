@@ -45,11 +45,12 @@ tmux
 - it works when bot is enabled, since all the tournaments are handled with bot commands only.
 
 ## Tournament Setup:
-- you need to have four channels in your server:
+- you need to have five channels in your server:
 - 1. brackets
 - 2. results
 - 3. dashboard
 - 4. registrations/register
+- 5. announcements
 - you have to create webhook for each of the channels and put them in the mods_config.json under the discord's webhooks section.
 - in the dist/ba_root/mods/tournament/graphics/generator.py, you have to replace the title and logo png with your own logo and title png urls (make sure they are raw urls)
 
@@ -66,6 +67,8 @@ tmux
 - /tournament register (registers a player to the tournament)
 - /tournament uuid \<user-mention> \<uuid> (changes the uuid of the registered player)
 - /tournament start (starts the tournament)
+- /tournament list (lists all the matches in the active round)
+- /tournament win \<match-index> \<team-index> (gives win to the team, you can get index from /tournament list)
 - note: only the leader can use the commands aside from the register command.
 
 ## Tournament Registration:

@@ -16,7 +16,8 @@
             "brackets": "ENTER-YOUR-WEBHOOK-URL-HERE",
             "dashboard": "ENTER-YOUR-WEBHOOK-URL-HERE",
             "results": "ENTER-YOUR-WEBHOOK-URL-HERE",
-            "registrations": "ENTER-YOUR-WEBHOOK-URL-HERE"
+            "registrations": "ENTER-YOUR-WEBHOOK-URL-HERE",
+            "announcements": "ENTER-YOUR-WEBHOOK-URL-HERE"
         }
     },
     "whitelist": false,

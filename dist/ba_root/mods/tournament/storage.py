@@ -33,12 +33,12 @@ class Tournament(Storage):
     def read(self, external_path=None) -> TournamentSchema:
         """reads from the file and returns schema"""
         data = super().read(external_path=external_path)
-        return TournamentSchema.from_dict(data=data)
+        return TournamentSchema.model_validate(data)
 
     @override
     def commit(self, data: TournamentSchema, external_path=None) -> None:
         """commits the schema to the file as dict."""
-        super().commit(data=data.to_dict(), external_path=external_path)
+        super().commit(data=data.model_dump(mode="json"), external_path=external_path)
 
     def create_season(self, schema: SeasonSchema) -> None:
         """creates the season with the given schema"""
