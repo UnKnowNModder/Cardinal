@@ -13,6 +13,7 @@ class Manager:
         self.pending_matches = {}
         self.players = {}
         self.ready_players = {}
+        self.pause_players = {}
 
         self.active_match = None
 
@@ -24,6 +25,9 @@ class Manager:
 
     def load_pending_matches(self):
         """load all pending matches from the database."""
+        self.pending_matches.clear()
+        self.players.clear()
+        self.ready_players.clear()
         round_path = self.brackets.get_active_round_path()
         round_data = self.brackets.read(round_path)
         if not round_data:
@@ -79,6 +83,7 @@ class Manager:
         }
 
         self.ready_players[key] = set()
+        self.pause_players[key] = set()
         for team, players in ((team1, players1), (team2, players2)):
             for player in players:
                 self.players[player] = [key, team]
@@ -108,6 +113,8 @@ class Manager:
         self.ready_players[match_key].add(account_id)
         match = self.pending_matches[match_key]
 
+        result = {"status": "success", "message": "You have been marked as ready."}
+
         # if all players of a match are ready, we can start the match.
         if self.ready_players[match_key] == set(match["players"]):
             self.active_match = {
@@ -118,15 +125,45 @@ class Manager:
                 "group_key": match["group_key"],
                 "round_key": match["round_key"],
             }
+            # clean-up them from the pending matches and ready players.
+            del self.pending_matches[match_key]
+            del self.ready_players[match_key]
+            for player in match["players"]:
+                del self.players[player]
             with bascenev1.ContextRef.empty():
-                bascenev1.apptimer(2.0, self.start_tournament_session)
+                bascenev1.apptimer(5.0, self.start_tournament_session)
+            result["start"] = True
+
+        return result
+
+    def handle_player_pause(self, account_id: str) -> dict:
+        if not self.active_match:
             return {
-                "status": "success",
-                "message": "You have been marked as ready.",
-                "start": True,
+                "status": "error",
+                "message": "There is no active match."
             }
 
-        return {"status": "success", "message": "You have been marked as ready."}
+        if account_id not in self.active_match["players"]:
+            return {
+                "status": "error",
+                "message": "You are not a member of the active match."
+            }
+
+        match_key = self.active_match["match_key"]
+        if account_id in self.pause_players.get(match_key, set()):
+            return {
+                "status": "error",
+                "message": "You are already marked for match pause."
+            }
+
+        result = {"status": "success", "message": "You have been marked for match pause."}
+        self.pause_players[match_key].add(account_id)
+        if self.pause_players[match_key] == set(self.active_match["players"]):
+            # if all players are marked for pause, we can pause the match.
+            # TODO: pause the match.
+            pass
+        return result
+
 
     def handle_player_leave(self, account_id: str) -> None:
         """handles the player leaving."""
@@ -192,6 +229,7 @@ class Manager:
 
     def end_tournament_session(self) -> None:
         """ends the tournament session."""
+        self.active_match = None
         bascenev1.broadcastmessage("Server will restart in 10 seconds.")
         with bascenev1.ContextRef.empty():
             bascenev1.apptimer(10.0, bascenev1.app.classic.server._execute_shutdown)

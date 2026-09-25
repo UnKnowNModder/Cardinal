@@ -64,7 +64,7 @@ class TournamentSession(DualTeamSession):
             team.text = bascenev1.newnode(
                 "text",
                 attrs={
-                    "text": f"{team.name[15:]} -> {team.score}/{team.series}",
+                    "text": f"{team.name[:15]}: {team.score}/{team.series}",
                     "position": (-600, team_y_positions[team.id]),
                     "color": (1, 1, 0),
                     "scale": 0.8,

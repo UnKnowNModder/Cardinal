@@ -1,5 +1,5 @@
 """ balances team players if needed."""
-
+import json
 from bascenev1 import get_foreground_host_session, broadcastmessage
 
 def check_team_balance():
@@ -19,7 +19,7 @@ def check_team_balance():
             player_to_move.setdata(teams[1], player_to_move.character, teams[1].color, player_to_move.highlight)
             icon_info = player_to_move.get_icon_info()
             player_to_move.set_icon_info(icon_info["texture"], icon_info["tint_texture"], teams[1].color, player_to_move.highlight)
-            broadcastmessage(f"shifted {player_to_move.getname()} to {teams[1].name}")
+            broadcastmessage(f"shifted {player_to_move.getname()} to {json.loads(teams[1].name.as_json())['t'][1]}")
     else:
         # team two is larger.
         for _ in range(moves):
@@ -28,4 +28,4 @@ def check_team_balance():
             player_to_move.setdata(teams[0], player_to_move.character, teams[0].color, player_to_move.highlight)
             icon_info = player_to_move.get_icon_info()
             player_to_move.set_icon_info(icon_info["texture"], icon_info["tint_texture"], teams[0].color, player_to_move.highlight)
-            broadcastmessage(f"shifted {player_to_move.getname()} to {teams[0].name}")
+            broadcastmessage(f"shifted {player_to_move.getname()} to {json.loads(teams[0].name.as_json())['t'][1]}")
