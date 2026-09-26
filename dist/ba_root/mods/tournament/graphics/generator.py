@@ -1656,6 +1656,12 @@ if __name__ == "__main__":
     if data["type"] == "registration":
         generate_player_registration(data["name"], webhook)
 
+    elif data["type"] == "match-announcement":
+        participant_role_id = data["participant_role_id"]
+        team1, team2 = data["team1"], data["team2"]
+        message = f"<@&{participant_role_id}> **{team1}** vs **{team2}** is live now in the server!"
+        webhook.send("announcements", key="match-announcement", content=message)
+
     elif data["type"] == "results":
         # for match result
         generate_match_result(data["details"], webhook)

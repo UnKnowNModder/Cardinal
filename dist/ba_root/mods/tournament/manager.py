@@ -27,7 +27,6 @@ class Manager:
         """load all pending matches from the database."""
         self.pending_matches.clear()
         self.players.clear()
-        self.ready_players.clear()
         round_path = self.brackets.get_active_round_path()
         round_data = self.brackets.read(round_path)
         if not round_data:
@@ -128,8 +127,6 @@ class Manager:
             # clean-up them from the pending matches and ready players.
             del self.pending_matches[match_key]
             del self.ready_players[match_key]
-            for player in match["players"]:
-                del self.players[player]
             with bascenev1.ContextRef.empty():
                 bascenev1.apptimer(5.0, self.start_tournament_session)
             result["start"] = True
@@ -229,7 +226,6 @@ class Manager:
 
     def end_tournament_session(self) -> None:
         """ends the tournament session."""
-        self.active_match = None
         bascenev1.broadcastmessage("Server will restart in 10 seconds.")
         with bascenev1.ContextRef.empty():
             bascenev1.apptimer(10.0, bascenev1.app.classic.server._execute_shutdown)

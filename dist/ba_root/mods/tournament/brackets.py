@@ -261,15 +261,14 @@ class Brackets(Storage):
                 if match["winner"] == match["team1"]:
                     stats[t1]["wins"] += 1
                     stats[t2]["loses"] += 1
-                    stats[t1]["points"] += 3
                 else:
                     stats[t1]["loses"] += 1
                     stats[t2]["wins"] += 1
-                    stats[t2]["points"] += 3
 
         # diff is tiebreaker.
         for team in stats.values():
             team["diff"] = team["rounds_won"] - team["rounds_lost"]
+            team["points"] = team["wins"] * 3 - team["loses"]
 
         sorted_teams = sorted(
             stats.values(),
@@ -414,13 +413,14 @@ class Brackets(Storage):
     def announce_match_start(self, team1: str, team2: str) -> None:
         """announces the match start in discord."""
         from tournament import tournament
-        from tournament.webhook import Webhook
-        webhook = Webhook(self.season_id)
-        participant_role_id = tournament.get_season(self.season_id).participant_role_id
-
-        message = f"<@&{participant_role_id}> **{team1}** vs **{team2}** is live now in the server!"
-        webhook.send("announcements", key="match-announcement", content=message)
-
+        data = {
+            "type": "match-announcement",
+            "season_id": self.season_id,
+            "participant_role_id": tournament.get_season(self.season_id).participant_role_id,
+            "team1": team1,
+            "team2": team2,
+        }
+        runner.run(data=data)
 
     def send_mainstage_brackets(self) -> None:
         """sends the mainstage brackets."""
